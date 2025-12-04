@@ -1,51 +1,20 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  reactStrictMode: true,
-  
-  // 1. Security Headers for Zama Encryption
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
-          { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' },
-        ],
-      },
-    ];
-  },
+cat > next.config.mjs <<'EOF'
+/** next.config.mjs */
+const relayer = process.env.NEXT_PUBLIC_ZAMA_RELAYER || 'https://relayer.testnet.zama.org';
 
-  // 2. Proxy for Zama Gateway (Bypasses CORS)
+export default {
+  experimental: { appDir: true },
+  // Add an explicit turbopack config object so Next.js doesn't error when a webpack config exists.
+  turbopack: {},
+  // Rewrites: proxy /zama-gateway to relayer (same-origin) — adjust if you use API routes instead.
   async rewrites() {
     return [
       {
         source: '/zama-gateway/:path*',
-        destination: 'https://gateway.sepolia.zama.ai/:path*',
-      },
-      {
-        source: '/zama-relayer/:path*',
-        destination: 'https://relayer.testnet.zama.org/:path*',
-      },
+        destination: `${relayer}/:path*`
+      }
     ];
-  },
-
-  // 3. Allow your Cloudflare Tunnel
-  experimental: {
-    serverActions: {
-      allowedOrigins: [
-        "localhost:3000", 
-        "bean-appears-sofa-delivers.trycloudflare.com" // <--- YOUR EXACT TUNNEL URL
-      ],
-    },
-  },
-
-  // 4. Build Settings
-  webpack: (config) => {
-    config.resolve.fallback = { fs: false, net: false, tls: false };
-    return config;
-  },
-  typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true }
+  }
+  // NOTE: if you previously added a custom webpack() function to modify externals, remove it.
+  // If you really need a custom webpack hook, we'll have to migrate or force webpack (see Option 2).
 };
-
-export default nextConfig;
